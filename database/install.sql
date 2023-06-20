@@ -22,7 +22,10 @@ INSERT IGNORE INTO api_user_group(user_id,group_id,solution_id) VALUES (10004000
 
 
 INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue)
-    VALUES (100040001, 'plugins.escm_plugin_import_delvry','textfileimport_desadv','post','before',100,10003,0,0);
+    VALUES (100040001, 'plugins.escm_plugin_import_delvry','textfileimport_desadv','post','before',100,10004,0,0);
+
+INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue)
+    VALUES (100040002, 'plugins.escm_plugin_import_delvry_vbeln','.DELVRY01.IDOC.E1EDL20.VBELN','xml_read','before',100,10004,0,0);
 
 
 /*
