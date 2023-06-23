@@ -74,11 +74,12 @@ order={}
 order[\'document_type\']=element.find("IDOCTYPE").text
 order[\'message_type\']=element.find("MESTYP").text
 
-globals[\'orders\'].append(order)
+globals[\'orders\'].append(order)');
+
 
 
 INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
-    VALUES (100040003, 'api_exec_inline_code','.DELVRY01.IDOC.E1EDL20.VBELN','xml_read','before',100,10004,0,0, '
+    VALUES (100040003, 'api_exec_inline_code','.DELVRY01.IDOC.E1EDL20','xml_read','before',100,10004,0,0, '
 import uuid
 import xml.etree.ElementTree as ET
 
@@ -94,7 +95,6 @@ order[\'partner_id\']=globals[\'partner_id\']
 
 globals[\'orders\'].append(order)
 globals[\'current_order_id\']=order[\'id\']');
-
 
 
 
