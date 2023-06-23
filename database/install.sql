@@ -11,6 +11,39 @@ DELETE FROM api_ui_app_nav_item WHERE solution_id=10004;
 /*
 Tables
 */
+DROP TABLE IF EXISTS escm_order_position;
+DROP TABLE IF EXISTS escm_order;
+
+
+CREATE TABLE IF NOT EXISTS escm_order (
+    id varchar(50) NOT NULL,
+    ext_order_no varchar(50),
+    message_type varchar(50),
+    document_type varchar(50),
+    partner_id varchar(50),
+    PRIMARY KEY(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE IF NOT EXISTS escm_order_position (
+    id varchar(50) NOT NULL,
+    order_id varchar(50),
+    ext_product_no varchar(50),
+    quantity decimal(6,2),
+    lot_no varchar(50),
+    ext_pos varchar(50),
+    ext_unit varchar(50),
+    PRIMARY KEY(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+INSERT IGNORE INTO api_table(id,alias,table_name,id_field_name,id_field_type,desc_field_name,enable_audit_log,solution_id)
+    VALUES
+    (100040001,'escm_order','escm_order','id','string','ext_order_no',0,10004);
+
+INSERT IGNORE INTO api_table(id,alias,table_name,id_field_name,id_field_type,desc_field_name,enable_audit_log,solution_id)
+    VALUES
+    (100040002,'escm_order_position','escm_order_position','id','string','ext_product_no',0,10004);
+
+
 
 /*
 Meta Data
@@ -24,15 +57,49 @@ INSERT IGNORE INTO api_user_group(user_id,group_id,solution_id) VALUES (10004000
 INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue)
     VALUES (100040001, 'plugins.escm_plugin_import_delvry','textfileimport_desadv','post','before',100,10004,0,0);
 
-INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue)
-    VALUES (100040002, 'plugins.escm_plugin_import_delvry_vbeln','.DELVRY01.IDOC.E1EDL20.VBELN','xml_read','before',100,10004,0,0);
+
+
+INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
+    VALUES (100040002, 'api_exec_inline_code','.DELVRY01.IDOC.EDI_DC40','xml_read','before',100,10004,0,0, '
+import uuid
+import xml.etree.ElementTree as ET
+
+globals=params[\'globals\']
+element=ET.XML(params[\'element\'])
+
+if not \'orders\' in globals:
+    globals[\'orders\']=[]
+
+order={}
+order[\'document_type\']=element.find("IDOCTYPE").text
+order[\'message_type\']=element.find("MESTYP").text
+
+globals[\'orders\'].append(order)
+
+
+INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
+    VALUES (100040003, 'api_exec_inline_code','.DELVRY01.IDOC.E1EDL20.VBELN','xml_read','before',100,10004,0,0, '
+import uuid
+import xml.etree.ElementTree as ET
+
+globals=params[\'globals\']
+element=ET.XML(params[\'element\'])
+
+if not \'orders\' in globals:
+    globals[\'orders\']=[]
+order={}
+order[\'id\']=str(uuid.uuid1())
+order[\'ext_order_no\']=element.text
+order[\'partner_id\']=globals[\'partner_id\']
+
+globals[\'orders\'].append(order)
+globals[\'current_order_id\']=order[\'id\']');
+
+
 
 
 /*
 
-INSERT IGNORE INTO api_table(id,alias,table_name,id_field_name,id_field_type,desc_field_name,enable_audit_log,solution_id)
-    VALUES
-    (100030001,'bank_item','bank_item','id','string','verwendungszweck',-1,10003);
 
 call api_proc_create_table_field_instance(100030001,10, 'id','ID', 'string',1,'{"disabled": true}', @out_value);
 call api_proc_create_table_field_instance(100030001,20,'auftragskonto','Auftragskonto','string',1,'{"disabled": true}', @out_value);
