@@ -11,6 +11,7 @@ DELETE FROM api_ui_app_nav_item WHERE solution_id=10004;
 /*
 Tables
 */
+DROP TABLE IF EXISTS escm_order_position_lot;
 DROP TABLE IF EXISTS escm_order_position;
 DROP TABLE IF EXISTS escm_order;
 DROP TABLE IF EXISTS escm_message;
@@ -18,10 +19,12 @@ DROP TABLE IF EXISTS escm_message;
 CREATE TABLE IF NOT EXISTS escm_message (
     id varchar(50) NOT NULL,
     ext_message_type varchar(50),
-    message_type varchar(50),
+    message_type_id varchar(50),
     ext_document_type varchar(50),
+    document_type_id varchar(50),
     ext_document_no varchar(50),
     ext_direction varchar(50),
+    direction_id varchar(50),
     partner_id varchar(50),
     PRIMARY KEY(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -30,9 +33,10 @@ CREATE TABLE IF NOT EXISTS escm_order (
     id varchar(50) NOT NULL,
     message_id varchar(50),
     ext_order_no varchar(50),
-    net_weight decimal(10,3),
-    gross_weight decimal(10,3),
+    net_weight decimal(10,2),
+    gross_weight decimal(10,2),
     ext_weight_unit varchar(50),
+    weight_unit_id varchar(50),
     PRIMARY KEY(id),
     FOREIGN KEY(message_id) REFERENCES escm_message(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -41,9 +45,15 @@ CREATE TABLE IF NOT EXISTS escm_order_position (
     id varchar(50) NOT NULL,
     order_id varchar(50),
     ext_product_no varchar(50),
+    product_id varchar(50),
     quantity decimal(6,2),
-    ext_pos varchar(50),
     ext_unit varchar(50),
+    unit_id varchar(50),
+    gross_weight decimal(10,2),
+    net_weight decimal(10,2),
+    ext_weight_unit varchar(50),
+    weight_init_id varchar(50),
+    ext_pos varchar(50),
     PRIMARY KEY(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -52,7 +62,6 @@ CREATE TABLE IF NOT EXISTS escm_order_position_lot (
     order_position_id varchar(50),
     lot_no varchar(50),
     quantity decimal(6,2),
-    ext_unit varchar(50),
     PRIMARY KEY(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -123,7 +132,7 @@ msg.id.value=globals[\'message\'][\'id\']
 msg.ext_document_type.value=globals[\'message\'][\'document_type\']
 msg.ext_message_type.value=globals[\'message\'][\'message_type\']
 msg.ext_direction.value=globals[\'message\'][\'direction\']
-msg.message_type.value=globals[\'partner_id\']
+msg.message_type_id.value=globals[\'partner_id\']
 msg.insert(context)
 ');
 
@@ -195,12 +204,51 @@ globals[\'position\'][\'gross_weight\']=element.find("VRKME").text
 globals[\'position\'][\'net_weight\']=element.find("NTGEW").text
 globals[\'position\'][\'gross_weight\']=element.find("BRGEW").text
 globals[\'position\'][\'weight_unit\']=element.find("GEWEI").text
+globals[\'position\'][\'unit\']=element.find("VRKME").text
 
+globals[\'lot\'][\'id\']=str(uuid.uuid1())
 globals[\'lot\'][\'order_position_id\']=globals[\'position\'][\'id\']
 globals[\'lot\'][\'lot_no\']=element.find("CHARG").text
 globals[\'lot\'][\'quantity\']=element.find("LFIMG").text
+globals[\'lot\'][\'unit\']=element.find("VRKME").text
 
 ');
+
+
+INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
+    VALUES (100040007, 'api_exec_inline_code','.DELVRY01.IDOC.E1EDL20.E1EDL24','xml_read','after',100,10004,0,0, '
+"""
+Save Position informations for escm_order
+"""
+import xml.etree.ElementTree as ET
+from shared.model import *
+
+globals=params[\'globals\']
+element=ET.XML(params[\'element\'])
+
+if \'position\' in globals:
+    pos=escm_order_position()
+    pos.id.value=globals[\'position\'][\'id\']
+    pos.order_id.value=globals[\'position\'][\'order_id\']
+    pos.ext_pos.value=globals[\'position\'][\'ext_pos_no\']
+    pos.quantity.value=globals[\'position\'][\'quantity\']
+    pos.ext_unit.value=globals[\'position\'][\'unit\']
+    pos.gross_weight.value=globals[\'position\'][\'gross_weight\']
+    pos.net_weight.value=globals[\'position\'][\'net_weight\']
+    pos.ext_weight_unit.value=globals[\'position\'][\'weight_unit\']
+    pos.ext_product_no.value=globals[\'position\'][\'ext_product_no\']
+
+pos.insert(context)
+
+if \'lot\' in globals:
+    lot=escm_order_position_lot()
+    lot.id.value=globals[\'lot\'][\'id\']
+    lot.order_position_id.value=globals[\'position\'][\'id\']
+    lot.lot_no.value=globals[\'lot\'][\'lot_no\']
+    lot.quantity.value=globals[\'lot\'][\'quantity\']
+    lot.insert(context)
+');
+
 
 
 
