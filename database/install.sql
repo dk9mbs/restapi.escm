@@ -13,15 +13,28 @@ Tables
 */
 DROP TABLE IF EXISTS escm_order_position;
 DROP TABLE IF EXISTS escm_order;
+DROP TABLE IF EXISTS escm_message;
 
+CREATE TABLE IF NOT EXISTS escm_message (
+    id varchar(50) NOT NULL,
+    ext_message_type varchar(50),
+    message_type varchar(50),
+    ext_document_type varchar(50),
+    ext_document_no varchar(50),
+    ext_direction varchar(50),
+    partner_id varchar(50),
+    PRIMARY KEY(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS escm_order (
     id varchar(50) NOT NULL,
+    message_id varchar(50),
     ext_order_no varchar(50),
-    message_type varchar(50),
-    document_type varchar(50),
-    partner_id varchar(50),
-    PRIMARY KEY(id)
+    net_weight decimal(10,3),
+    gross_weight decimal(10,3),
+    ext_weight_unit varchar(50),
+    PRIMARY KEY(id),
+    FOREIGN KEY(message_id) REFERENCES escm_message(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS escm_order_position (
@@ -29,8 +42,16 @@ CREATE TABLE IF NOT EXISTS escm_order_position (
     order_id varchar(50),
     ext_product_no varchar(50),
     quantity decimal(6,2),
-    lot_no varchar(50),
     ext_pos varchar(50),
+    ext_unit varchar(50),
+    PRIMARY KEY(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE IF NOT EXISTS escm_order_position_lot (
+    id varchar(50) NOT NULL,
+    order_position_id varchar(50),
+    lot_no varchar(50),
+    quantity decimal(6,2),
     ext_unit varchar(50),
     PRIMARY KEY(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -43,6 +64,13 @@ INSERT IGNORE INTO api_table(id,alias,table_name,id_field_name,id_field_type,des
     VALUES
     (100040002,'escm_order_position','escm_order_position','id','string','ext_product_no',0,10004);
 
+INSERT IGNORE INTO api_table(id,alias,table_name,id_field_name,id_field_type,desc_field_name,enable_audit_log,solution_id)
+    VALUES
+    (100040003,'escm_message','escm_message','id','string','document_no',0,10004);
+
+INSERT IGNORE INTO api_table(id,alias,table_name,id_field_name,id_field_type,desc_field_name,enable_audit_log,solution_id)
+    VALUES
+    (100040004,'escm_order_position_lot','escm_order_position_lot','id','string','lot_no',0,10004);
 
 
 /*
@@ -61,40 +89,118 @@ INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,typ
 
 INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
     VALUES (100040002, 'api_exec_inline_code','.DELVRY01.IDOC.EDI_DC40','xml_read','before',100,10004,0,0, '
-import uuid
+"""
+Collect order data in the control dict
+"""
 import xml.etree.ElementTree as ET
+import uuid
 
 globals=params[\'globals\']
 element=ET.XML(params[\'element\'])
 
-if not \'orders\' in globals:
-    globals[\'orders\']=[]
-
-order={}
-order[\'document_type\']=element.find("IDOCTYPE").text
-order[\'message_type\']=element.find("MESTYP").text
-
-globals[\'orders\'].append(order)');
-
+globals[\'message\']={}
+globals[\'message\'][\'id\']=str(uuid.uuid1())
+globals[\'message\'][\'document_type\']=element.find("IDOCTYP").text
+globals[\'message\'][\'message_type\']=element.find("MESTYP").text
+globals[\'message\'][\'direction\']=element.find("DIRECT").text
+');
 
 
 INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
-    VALUES (100040003, 'api_exec_inline_code','.DELVRY01.IDOC.E1EDL20','xml_read','before',100,10004,0,0, '
+    VALUES (100040003, 'api_exec_inline_code','.DELVRY01.IDOC.EDI_DC40','xml_read','after',100,10004,0,0, '
+"""
+Save the message information
+"""
+import xml.etree.ElementTree as ET
+
+from shared.model import escm_message
+
+globals=params[\'globals\']
+element=ET.XML(params[\'element\'])
+
+msg=escm_message()
+msg.id.value=globals[\'message\'][\'id\']
+msg.ext_document_type.value=globals[\'message\'][\'document_type\']
+msg.ext_message_type.value=globals[\'message\'][\'message_type\']
+msg.ext_direction.value=globals[\'message\'][\'direction\']
+msg.message_type.value=globals[\'partner_id\']
+msg.insert(context)
+');
+
+
+INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
+    VALUES (100040004, 'api_exec_inline_code','.DELVRY01.IDOC.E1EDL20','xml_read','before',100,10004,0,0, '
+"""
+Collect orderhead informations for escm_order
+"""
+import xml.etree.ElementTree as ET
 import uuid
+
+globals=params[\'globals\']
+element=ET.XML(params[\'element\'])
+
+globals[\'order\']={}
+
+globals[\'order\'][\'id\']=str(uuid.uuid1())
+globals[\'order\'][\'ext_order_no\']=element.find("VBELN").text
+globals[\'order\'][\'net_weight\']=element.find("BTGEW").text
+globals[\'order\'][\'gross_weight\']=element.find("NTGEW").text
+globals[\'order\'][\'weight_unit\']=element.find("GEWEI").text
+');
+
+INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
+    VALUES (100040005, 'api_exec_inline_code','.DELVRY01.IDOC.E1EDL20','xml_read','after',100,10004,0,0, '
+"""
+Save the order in escm_orders on closed tag
+"""
+from shared.model import escm_order
 import xml.etree.ElementTree as ET
 
 globals=params[\'globals\']
 element=ET.XML(params[\'element\'])
 
-if not \'orders\' in globals:
-    globals[\'orders\']=[]
-order={}
-order[\'id\']=str(uuid.uuid1())
-order[\'ext_order_no\']=element.text
-order[\'partner_id\']=globals[\'partner_id\']
+order=escm_order()
+order.id.value=str(globals[\'order\'][\'id\'])
+order.ext_order_no.value=globals[\'order\'][\'ext_order_no\']
+order.message_id.value=globals[\'message\'][\'id\']
+order.net_weight.value=globals[\'order\'][\'net_weight\']
+order.gross_weight.value=globals[\'order\'][\'gross_weight\']
+order.ext_weight_unit.value=globals[\'order\'][\'weight_unit\']
 
-globals[\'orders\'].append(order)
-globals[\'current_order_id\']=order[\'id\']');
+order.insert(context)
+');
+
+
+/* Positions */
+INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
+    VALUES (100040006, 'api_exec_inline_code','.DELVRY01.IDOC.E1EDL20.E1EDL24','xml_read','before',100,10004,0,0, '
+"""
+Collect orderhead informations for escm_order
+"""
+import xml.etree.ElementTree as ET
+import uuid
+
+globals=params[\'globals\']
+element=ET.XML(params[\'element\'])
+
+globals[\'position\']={}
+globals[\'lot\']={}
+
+globals[\'position\'][\'id\']=str(uuid.uuid1())
+globals[\'position\'][\'order_id\']=globals[\'order\'][\'id\']
+globals[\'position\'][\'ext_pos_no\']=element.find("POSNR").text
+globals[\'position\'][\'ext_product_no\']=element.find("MATNR").text
+globals[\'position\'][\'quantity\']=element.find("LFIMG").text
+globals[\'position\'][\'gross_weight\']=element.find("VRKME").text
+globals[\'position\'][\'net_weight\']=element.find("NTGEW").text
+globals[\'position\'][\'gross_weight\']=element.find("BRGEW").text
+globals[\'position\'][\'weight_unit\']=element.find("GEWEI").text
+
+globals[\'lot\'][\'order_position_id\']=globals[\'position\'][\'id\']
+globals[\'lot\'][\'lot_no\']=element.find("CHARG").text
+globals[\'lot\'][\'quantity\']=element.find("LFIMG").text
+
+');
 
 
 

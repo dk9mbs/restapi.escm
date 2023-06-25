@@ -30,7 +30,7 @@ def _inner(is_item, element, stack, globals):
     #    globals['orders'].append(order)
     #    globals['current_order_id']=order['id']
 
-    if globals['path']==".DELVRY01.IDOC.E1EDL20.E1EDL24.MATNR":
+    if globals['path']=="XXX.DELVRY01.IDOC.E1EDL20.E1EDL24.MATNR":
         if not 'positions' in globals:
             globals['positions']=[]
 
@@ -58,20 +58,25 @@ def execute(context, plugin_context, params):
 
 
     content=params['data']['content']
-    reader=XmlReader(_inner, context, "DEFAULT", content.encode('utf-8') )
+
+    globals=dict()
+    globals['order']=dict()
+
+    reader=XmlReader(_inner, context, "DEFAULT",globals, content.encode('utf-8') )
     reader.read()
-    #print(reader.globals)
 
-    from model.escm_order import escm_order
-    from model.escm_order_position import escm_order_position
+    print(reader.globals)
 
-    order=escm_order()
-    for x in range(len(reader.globals['orders'])):
-        order.id.value=reader.globals['orders'][x]['id']
-        order.document_type.value=reader.globals['orders'][x]['document_type']
-        order.ext_order_no.value=reader.globals['orders'][x]['ext_order_no']
-        order.message_type.value=reader.globals['orders'][x]['message_type']
-        order.partner_id.value=reader.globals['orders'][x]['partner_id']
-        order.insert(context)
+    #from model.escm_order import escm_order
+    #from model.escm_order_position import escm_order_position
+
+    #order=escm_order()
+    #for x in range(len(reader.globals['orders'])):
+    #    order.id.value=reader.globals['orders'][x]['id']
+    #    order.document_type.value=reader.globals['orders'][x]['document_type']
+    #    order.ext_order_no.value=reader.globals['orders'][x]['ext_order_no']
+    #    order.message_type.value=reader.globals['orders'][x]['message_type']
+    #    order.partner_id.value=reader.globals['orders'][x]['partner_id']
+    #    order.insert(context)
 
 
