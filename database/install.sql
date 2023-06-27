@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS escm_order_position (
     gross_weight decimal(10,2),
     net_weight decimal(10,2),
     ext_weight_unit varchar(50),
-    weight_init_id varchar(50),
+    weight_unit_id varchar(50),
     ext_pos varchar(50),
     PRIMARY KEY(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -132,7 +132,7 @@ msg.id.value=globals[\'message\'][\'id\']
 msg.ext_document_type.value=globals[\'message\'][\'document_type\']
 msg.ext_message_type.value=globals[\'message\'][\'message_type\']
 msg.ext_direction.value=globals[\'message\'][\'direction\']
-msg.message_type_id.value=globals[\'partner_id\']
+msg.message_type_id.value=globals[\'message_type_id\']
 msg.insert(context)
 ');
 
