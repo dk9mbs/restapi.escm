@@ -18,6 +18,7 @@ DROP TABLE IF EXISTS escm_message;
 
 CREATE TABLE IF NOT EXISTS escm_message (
     id varchar(50) NOT NULL,
+    file_name varchar(250),
     ext_message_type varchar(50),
     message_type_id varchar(50),
     ext_document_type varchar(50),
