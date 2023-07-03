@@ -15,31 +15,59 @@ DROP TABLE IF EXISTS escm_order_position_lot;
 DROP TABLE IF EXISTS escm_order_position;
 DROP TABLE IF EXISTS escm_order;
 DROP TABLE IF EXISTS escm_message;
+DROP TABLE IF EXISTS escm_message_exchange;
+DROP TABLE IF EXISTS escm_message_type;
+DROP TABLE IF EXISTS escm_partner;
+
+CREATE TABLE IF NOT EXISTS escm_partner (
+    id varchar(50) NOT NULL,
+    name varchar(250) NOT NULL,
+    PRIMARY KEY(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+INSERT IGNORE INTO escm_partner (id, name) VALUE('DEFAULT','Default partner');
+
+CREATE TABLE IF NOT EXISTS escm_message_exchange (
+    id varchar(50) NOT NULL,
+    name varchar(250) NOT NULL,
+    partner_id varchar(50),
+    process nvarchar(250) NOT NULL,
+    test_text text NULL,
+    PRIMARY KEY(id),
+    FOREIGN KEY(partner_id) REFERENCES escm_partner(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+INSERT IGNORE INTO escm_message_exchange (id, name, test_text, process, partner_id) 
+    VALUE
+        ('DEFAULT_SAP_SHPCON','Warenausgang Rückmeldung','<MESTYP>SHPCON</MESTYP>','SAP_SHPCON', 'DEFAULT');
 
 CREATE TABLE IF NOT EXISTS escm_message (
     id varchar(50) NOT NULL,
     file_name varchar(250),
     ext_message_type varchar(50),
-    message_type_id varchar(50),
+    message_exchange_id varchar(50),
     ext_document_type varchar(50),
     document_type_id varchar(50),
     ext_document_no varchar(50),
     ext_direction varchar(50),
     direction_id varchar(50),
     partner_id varchar(50),
-    PRIMARY KEY(id)
+    PRIMARY KEY(id),
+    FOREIGN KEY(message_exchange_id) REFERENCES escm_message_exchange(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS escm_order (
     id varchar(50) NOT NULL,
     message_id varchar(50),
     ext_order_no varchar(50),
+    message_exchange_id varchar(50),
     net_weight decimal(10,2),
     gross_weight decimal(10,2),
     ext_weight_unit varchar(50),
     weight_unit_id varchar(50),
     PRIMARY KEY(id),
-    FOREIGN KEY(message_id) REFERENCES escm_message(id)
+    FOREIGN KEY(message_id) REFERENCES escm_message(id),
+    FOREIGN KEY(message_exchange_id) REFERENCES escm_message_exchange(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS escm_order_position (
@@ -82,6 +110,13 @@ INSERT IGNORE INTO api_table(id,alias,table_name,id_field_name,id_field_type,des
     VALUES
     (100040004,'escm_order_position_lot','escm_order_position_lot','id','string','lot_no',0,10004);
 
+INSERT IGNORE INTO api_table(id,alias,table_name,id_field_name,id_field_type,desc_field_name,enable_audit_log,solution_id)
+    VALUES
+    (100040005,'escm_message_exchange','escm_message_exchange','id','string','name',0,10004);
+
+INSERT IGNORE INTO api_table(id,alias,table_name,id_field_name,id_field_type,desc_field_name,enable_audit_log,solution_id)
+    VALUES
+    (100040006,'escm_partner','escm_partner','id','string','name',0,10004);
 
 /*
 Meta Data
@@ -133,7 +168,7 @@ msg.id.value=globals[\'message\'][\'id\']
 msg.ext_document_type.value=globals[\'message\'][\'document_type\']
 msg.ext_message_type.value=globals[\'message\'][\'message_type\']
 msg.ext_direction.value=globals[\'message\'][\'direction\']
-msg.message_type_id.value=globals[\'message_type_id\']
+msg.message_exchange_id.value=globals[\'message_exchange_id\']
 msg.insert(context)
 ');
 
@@ -176,7 +211,7 @@ order.message_id.value=globals[\'message\'][\'id\']
 order.net_weight.value=globals[\'order\'][\'net_weight\']
 order.gross_weight.value=globals[\'order\'][\'gross_weight\']
 order.ext_weight_unit.value=globals[\'order\'][\'weight_unit\']
-
+order.message_exchange_id.value=globals[\'message_exchange_id\']
 order.insert(context)
 ');
 
