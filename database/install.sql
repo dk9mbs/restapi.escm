@@ -7,6 +7,7 @@ DELETE FROM api_group WHERE solution_id=10004;
 DELETE FROM api_event_handler WHERE solution_id=10004;
 DELETE FROM api_table_view where solution_id=10004;
 DELETE FROM api_ui_app_nav_item WHERE solution_id=10004;
+UPDATE api_table SET desc_field_name='ext_document_no' WHERE id=100040003;
 
 /*
 Tables
@@ -104,7 +105,7 @@ INSERT IGNORE INTO api_table(id,alias,table_name,id_field_name,id_field_type,des
 
 INSERT IGNORE INTO api_table(id,alias,table_name,id_field_name,id_field_type,desc_field_name,enable_audit_log,solution_id)
     VALUES
-    (100040003,'escm_message','escm_message','id','string','document_no',0,10004);
+    (100040003,'escm_message','escm_message','id','string','ext_document_no',0,10004);
 
 INSERT IGNORE INTO api_table(id,alias,table_name,id_field_name,id_field_type,desc_field_name,enable_audit_log,solution_id)
     VALUES
@@ -204,6 +205,10 @@ import xml.etree.ElementTree as ET
 globals=params[\'globals\']
 element=ET.XML(params[\'element\'])
 
+order=escm_order.objects(context).select().where(escm_order.ext_order_no==globals[\'order\'][\'ext_order_no\']).to_entity()
+if not order==None:
+    raise(Exception(\'Beleg bereits vorhanden!!!\'))
+    
 order=escm_order()
 order.id.value=str(globals[\'order\'][\'id\'])
 order.ext_order_no.value=globals[\'order\'][\'ext_order_no\']
