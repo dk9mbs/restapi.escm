@@ -44,7 +44,7 @@ INSERT IGNORE INTO escm_message_exchange (id, name, test_text, process, partner_
 
 INSERT IGNORE INTO escm_message_exchange (id, name, test_text, process, partner_id) 
     VALUE
-        ('DEFAULT_SAP_DELVRY','Liefer Avis','<IDOCTYP>DELVRY0','SAP_DELVRY', 'DEFAULT');
+        ('DEFAULT_SAP_DESADV','Liefer Avis','<IDOCTYP>DELVRY0','SAP_DESADV', 'DEFAULT');
 
 CREATE TABLE IF NOT EXISTS escm_message (
     id varchar(50) NOT NULL,
@@ -138,7 +138,7 @@ INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,typ
 
 
 INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
-    VALUES (100040002, 'api_exec_inline_code','.DELVRY01.IDOC.EDI_DC40','SAP_SHPCON','before',100,10004,0,0, '
+    VALUES (100040002, 'api_exec_inline_code','.DELVRY.IDOC.EDI_DC40','SAP_SHPCON','before',100,10004,0,0, '
 """
 Collect order data in the control dict
 """
@@ -157,7 +157,7 @@ globals[\'message\'][\'direction\']=element.find("DIRECT").text
 
 
 INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
-    VALUES (100040003, 'api_exec_inline_code','.DELVRY01.IDOC.EDI_DC40','SAP_SHPCON','after',100,10004,0,0, '
+    VALUES (100040003, 'api_exec_inline_code','.DELVRY.IDOC.EDI_DC40','SAP_SHPCON','after',100,10004,0,0, '
 """
 Save the message information
 """
@@ -174,12 +174,13 @@ msg.ext_document_type.value=globals[\'message\'][\'document_type\']
 msg.ext_message_type.value=globals[\'message\'][\'message_type\']
 msg.ext_direction.value=globals[\'message\'][\'direction\']
 msg.message_exchange_id.value=globals[\'message_exchange_id\']
+msg.file_name.value=globals[\'file_name\']
 msg.insert(context)
 ');
 
 
 INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
-    VALUES (100040004, 'api_exec_inline_code','.DELVRY01.IDOC.E1EDL20','SAP_SHPCON','before',100,10004,0,0, '
+    VALUES (100040004, 'api_exec_inline_code','.DELVRY.IDOC.E1EDL20','SAP_SHPCON','before',100,10004,0,0, '
 """
 Collect orderhead informations for escm_order
 """
@@ -199,7 +200,7 @@ globals[\'order\'][\'weight_unit\']=element.find("GEWEI").text
 ');
 
 INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
-    VALUES (100040005, 'api_exec_inline_code','.DELVRY01.IDOC.E1EDL20','SAP_SHPCON','after',100,10004,0,0, '
+    VALUES (100040005, 'api_exec_inline_code','.DELVRY.IDOC.E1EDL20','SAP_SHPCON','after',100,10004,0,0, '
 """
 Save the order in escm_orders on closed tag
 """
@@ -227,7 +228,7 @@ else:
 
 /* Positions */
 INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
-    VALUES (100040006, 'api_exec_inline_code','.DELVRY01.IDOC.E1EDL20.E1EDL24','SAP_SHPCON','before',100,10004,0,0, '
+    VALUES (100040006, 'api_exec_inline_code','.DELVRY.IDOC.E1EDL20.E1EDL24','SAP_SHPCON','before',100,10004,0,0, '
 """
 Collect orderhead informations for escm_order
 """
@@ -261,7 +262,7 @@ globals[\'lot\'][\'unit\']=element.find("VRKME").text
 
 
 INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
-    VALUES (100040007, 'api_exec_inline_code','.DELVRY01.IDOC.E1EDL20.E1EDL24','SAP_SHPCON','after',100,10004,0,0, '
+    VALUES (100040007, 'api_exec_inline_code','.DELVRY.IDOC.E1EDL20.E1EDL24','SAP_SHPCON','after',100,10004,0,0, '
 """
 Save Position informations for escm_order
 """
@@ -293,6 +294,81 @@ if \'lot\' in globals:
     lot.quantity.value=globals[\'lot\'][\'quantity\']
     lot.insert(context)
 ');
+
+
+
+/*
+
+DESADV
+
+*/
+
+INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
+    VALUES (100040008, 'api_exec_inline_code','.DELVRY.IDOC.EDI_DC40','SAP_DESADV','before',100,10004,0,0, '
+"""
+Collect order data in the control dict
+"""
+import xml.etree.ElementTree as ET
+import uuid
+from shared.model import escm_message
+
+globals=params[\'globals\']
+element=ET.XML(params[\'element\'])
+
+globals[\'message\']={}
+globals[\'message\'][\'id\']=str(uuid.uuid1())
+
+msg=escm_message()
+msg.id.value=globals[\'message\'][\'id\']
+msg.ext_document_type.value=element.find("IDOCTYP").text
+msg.ext_message_type.value=element.find("MESTYP").text
+msg.ext_direction.value=element.find("DIRECT").text
+msg.message_exchange_id.value=globals[\'message_exchange_id\']
+msg.file_name.value=globals[\'file_name\']
+msg.ext_document_no.value=element.find("DOCNUM").text
+msg.insert(context)
+');
+
+
+
+INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
+    VALUES (100040009, 'api_exec_inline_code','.DELVRY.IDOC.E1EDL20','SAP_DESADV','before',100,10004,0,0, '
+"""
+Collect orderhead informations for escm_order
+"""
+import xml.etree.ElementTree as ET
+import uuid
+from shared.model import escm_order
+
+globals=params[\'globals\']
+element=ET.XML(params[\'element\'])
+
+globals[\'order\']={}
+
+globals[\'order\'][\'id\']=str(uuid.uuid1())
+
+order=escm_order.objects(context).select().where(escm_order.ext_order_no==element.find("VBELN").text).where(escm_order.message_exchange_id=="DEFAULT_SAP_DESADV").to_entity()
+if order==None:
+    order=escm_order()
+    order.id.value=str(globals[\'order\'][\'id\'])
+    order.ext_order_no.value=element.find("VBELN").text
+    order.message_id.value=globals[\'message\'][\'id\']
+    order.net_weight.value=element.find("NTGEW").text
+    order.gross_weight.value=element.find("BTGEW").text
+    order.ext_weight_unit.value=element.find("GEWEI").text
+    order.message_exchange_id.value=globals[\'message_exchange_id\']
+    order.insert(context)
+else:
+    raise(Exception(\'Beleg bereits vorhanden!!!\'))
+
+
+');
+
+
+
+
+
+
 
 
 
