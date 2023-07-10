@@ -80,11 +80,11 @@ CREATE TABLE IF NOT EXISTS escm_order_position (
     order_id varchar(50),
     ext_product_no varchar(50),
     product_id varchar(50),
-    quantity decimal(6,2),
+    quantity decimal(10,4),
     ext_unit varchar(50),
     unit_id varchar(50),
-    gross_weight decimal(10,2),
-    net_weight decimal(10,2),
+    gross_weight decimal(10,4),
+    net_weight decimal(10,4),
     ext_weight_unit varchar(50),
     weight_unit_id varchar(50),
     ext_pos varchar(50),
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS escm_order_position_lot (
     id varchar(50) NOT NULL,
     order_position_id varchar(50),
     lot_no varchar(50),
-    quantity decimal(6,2),
+    quantity decimal(10,4),
     PRIMARY KEY(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -360,8 +360,51 @@ if order==None:
     order.insert(context)
 else:
     raise(Exception(\'Beleg bereits vorhanden!!!\'))
+');
 
+/*
 
+*/
+INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
+    VALUES (100040010, 'api_exec_inline_code','.DELVRY.IDOC.E1EDL20.E1EDL24','SAP_DESADV','before',100,10004,0,0, '
+"""
+Collect orderhead informations for escm_order
+"""
+import xml.etree.ElementTree as ET
+import uuid
+from shared.model import *
+
+globals=params[\'globals\']
+element=ET.XML(params[\'element\'])
+
+globals[\'position\']={}
+globals[\'lot\']={}
+
+globals[\'position\'][\'id\']=str(uuid.uuid1())
+globals[\'position\'][\'order_id\']=globals[\'order\'][\'id\']
+globals[\'lot\'][\'id\']=str(uuid.uuid1())
+
+if \'position\' in globals:
+    pos=escm_order_position()
+    pos.id.value=globals[\'position\'][\'id\']
+    pos.order_id.value=globals[\'order\'][\'id\']
+
+    pos.ext_pos.value=element.find("POSNR").text
+    pos.quantity.value=element.find("LFIMG").text
+    pos.ext_unit.value=element.find("VRKME").text
+    pos.gross_weight.value=element.find("BRGEW").text
+    pos.net_weight.value=element.find("NTGEW").text
+    pos.ext_weight_unit.value=element.find("GEWEI").text
+    pos.ext_product_no.value=element.find("MATNR").text
+    pos.insert(context)
+
+if not element.find("CHARG")==None:
+    lot=escm_order_position_lot()
+    lot.id.value=globals[\'lot\'][\'id\']
+    lot.order_position_id.value=globals[\'position\'][\'id\']
+    lot.lot_no.value=element.find("CHARG").text
+    lot.quantity.value=element.find("LFIMG").text
+    lot.insert(context)
 ');
 
 
