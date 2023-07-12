@@ -131,11 +131,27 @@ INSERT IGNORE INTO api_user (id,username,password,is_admin,disabled,solution_id)
 INSERT IGNORE INTO api_group(id,groupname,solution_id) VALUES (100040001,'escm',10004);
 INSERT IGNORE INTO api_user_group(user_id,group_id,solution_id) VALUES (100040001,100040001,10004);
 
+/*
+App
+*/
+INSERT IGNORE INTO api_ui_app (id, name,description,home_url,solution_id)
+VALUES (
+100040001,'ESCM','ESCM','/ui/v1.0/data/view/escm_order/default?app_id=100040001',10004);
 
+INSERT IGNORE INTO api_ui_app_nav_item(id, app_id,name,url,type_id,solution_id) VALUES (
+100040001,100040001,'Belege','/ui/v1.0/data/view/escm_order/default',1,10004);
+
+/*
+INSERT IGNORE INTO api_group_permission (group_id,table_id,mode_create,mode_read,mode_update,mode_delete,solution_id)
+    VALUES
+    (100030001,100030001,-1,-1,-1,-1,10003);
+*/
+
+/*
+Eventhandler
+*/
 INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue)
     VALUES (100040001, 'plugins.escm_plugin_import_delvry','textfileimport_desadv','post','before',100,10004,0,0);
-
-
 
 INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
     VALUES (100040002, 'api_exec_inline_code','.DELVRY.IDOC.EDI_DC40','SAP_SHPCON','before',100,10004,0,0, '
