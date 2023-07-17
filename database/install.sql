@@ -44,7 +44,7 @@ INSERT IGNORE INTO escm_message_exchange (id, name, test_text, process, partner_
 
 INSERT IGNORE INTO escm_message_exchange (id, name, test_text, process, partner_id) 
     VALUE
-        ('DEFAULT_SAP_DESADV','Liefer Avis','<IDOCTYP>DELVRY0','SAP_DESADV', 'DEFAULT');
+        ('DEFAULT_SAP_DESADV','Liefer Avis','<MESTYP>DESADV</MESTYP>','SAP_DESADV', 'DEFAULT');
 
 CREATE TABLE IF NOT EXISTS escm_message (
     id varchar(50) NOT NULL,
@@ -66,8 +66,8 @@ CREATE TABLE IF NOT EXISTS escm_order (
     message_id varchar(50),
     ext_order_no varchar(50),
     message_exchange_id varchar(50),
-    net_weight decimal(10,2),
-    gross_weight decimal(10,2),
+    net_weight decimal(15,4),
+    gross_weight decimal(15,4),
     ext_weight_unit varchar(50),
     weight_unit_id varchar(50),
     PRIMARY KEY(id),
@@ -83,8 +83,8 @@ CREATE TABLE IF NOT EXISTS escm_order_position (
     quantity decimal(10,4),
     ext_unit varchar(50),
     unit_id varchar(50),
-    gross_weight decimal(10,4),
-    net_weight decimal(10,4),
+    gross_weight decimal(15,4),
+    net_weight decimal(15,4),
     ext_weight_unit varchar(50),
     weight_unit_id varchar(50),
     ext_pos varchar(50),
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS escm_order_position_lot (
     id varchar(50) NOT NULL,
     order_position_id varchar(50),
     lot_no varchar(50),
-    quantity decimal(10,4),
+    quantity decimal(15,4),
     PRIMARY KEY(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -314,9 +314,7 @@ if \'lot\' in globals:
 
 
 /*
-
 DESADV
-
 */
 
 INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
