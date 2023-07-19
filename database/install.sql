@@ -160,15 +160,20 @@ Collect order data in the control dict
 """
 import xml.etree.ElementTree as ET
 import uuid
+import pickle
+from shared.model import *
 
 globals=params[\'globals\']
 element=ET.XML(params[\'element\'])
 
-globals[\'message\']={}
-globals[\'message\'][\'id\']=str(uuid.uuid1())
-globals[\'message\'][\'document_type\']=element.find("IDOCTYP").text
-globals[\'message\'][\'message_type\']=element.find("MESTYP").text
-globals[\'message\'][\'direction\']=element.find("DIRECT").text
+msg=escm_message()
+msg.id.value=str(uuid.uuid1())
+msg.ext_document_type.value=element.find("IDOCTYP").text
+msg.ext_message_type.value=element.find("MESTYP").text
+msg.ext_direction.value=element.find("DIRECT").text
+msg.message_exchange_id.value=globals[\'message_exchange_id\']
+msg.file_name.value=globals[\'file_name\']
+globals[\'message\']=pickle.dumps(msg)
 ');
 
 
@@ -178,19 +183,12 @@ INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,typ
 Save the message information
 """
 import xml.etree.ElementTree as ET
-
-from shared.model import escm_message
+import pickle
 
 globals=params[\'globals\']
 element=ET.XML(params[\'element\'])
 
-msg=escm_message()
-msg.id.value=globals[\'message\'][\'id\']
-msg.ext_document_type.value=globals[\'message\'][\'document_type\']
-msg.ext_message_type.value=globals[\'message\'][\'message_type\']
-msg.ext_direction.value=globals[\'message\'][\'direction\']
-msg.message_exchange_id.value=globals[\'message_exchange_id\']
-msg.file_name.value=globals[\'file_name\']
+msg=pickle.loads(globals[\'message\'])
 msg.insert(context)
 ');
 
@@ -202,17 +200,24 @@ Collect orderhead informations for escm_order
 """
 import xml.etree.ElementTree as ET
 import uuid
+import pickle
+from shared.model import *
 
 globals=params[\'globals\']
 element=ET.XML(params[\'element\'])
+msg=pickle.loads(globals[\'message\'])
 
-globals[\'order\']={}
+order=escm_order()
+order.id.value=str(uuid.uuid1())
+order.ext_order_no.value=element.find("VBELN").text
+order.message_id.value=msg.id.value
+order.net_weight.value=element.find("NTGEW").text
+order.gross_weight.value=element.find("BTGEW").text
+order.ext_weight_unit.value=element.find("GEWEI").text
+order.message_exchange_id.value=globals[\'message_exchange_id\']
 
-globals[\'order\'][\'id\']=str(uuid.uuid1())
-globals[\'order\'][\'ext_order_no\']=element.find("VBELN").text
-globals[\'order\'][\'net_weight\']=element.find("BTGEW").text
-globals[\'order\'][\'gross_weight\']=element.find("NTGEW").text
-globals[\'order\'][\'weight_unit\']=element.find("GEWEI").text
+globals[\'order\']=pickle.dumps(order)
+
 ');
 
 INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,type,sorting,solution_id,run_async, run_queue, inline_code)
@@ -222,21 +227,16 @@ Save the order in escm_orders on closed tag
 """
 from shared.model import escm_order
 import xml.etree.ElementTree as ET
+import pickle
 
 globals=params[\'globals\']
 element=ET.XML(params[\'element\'])
 
-order=escm_order.objects(context).select().where(escm_order.ext_order_no==globals[\'order\'][\'ext_order_no\']).to_entity()
+new_order=pickle.loads(globals[\'order\'])
+
+order=escm_order.objects(context).select().where(escm_order.ext_order_no==new_order.ext_order_no.value).to_entity()
 if order==None:
-    order=escm_order()
-    order.id.value=str(globals[\'order\'][\'id\'])
-    order.ext_order_no.value=globals[\'order\'][\'ext_order_no\']
-    order.message_id.value=globals[\'message\'][\'id\']
-    order.net_weight.value=globals[\'order\'][\'net_weight\']
-    order.gross_weight.value=globals[\'order\'][\'gross_weight\']
-    order.ext_weight_unit.value=globals[\'order\'][\'weight_unit\']
-    order.message_exchange_id.value=globals[\'message_exchange_id\']
-    order.insert(context)
+    new_order.insert(context)
 else:
     raise(Exception(\'Beleg bereits vorhanden!!!\'))
 ');
@@ -250,30 +250,34 @@ Collect orderhead informations for escm_order
 """
 import xml.etree.ElementTree as ET
 import uuid
+import pickle
 
+from shared.model import *
 globals=params[\'globals\']
 element=ET.XML(params[\'element\'])
 
-globals[\'position\']={}
-globals[\'lot\']={}
+order=pickle.loads(globals[\'order\'])
 
-globals[\'position\'][\'id\']=str(uuid.uuid1())
-globals[\'position\'][\'order_id\']=globals[\'order\'][\'id\']
-globals[\'position\'][\'ext_pos_no\']=element.find("POSNR").text
-globals[\'position\'][\'ext_product_no\']=element.find("MATNR").text
-globals[\'position\'][\'quantity\']=element.find("LFIMG").text
-globals[\'position\'][\'gross_weight\']=element.find("VRKME").text
-globals[\'position\'][\'net_weight\']=element.find("NTGEW").text
-globals[\'position\'][\'gross_weight\']=element.find("BRGEW").text
-globals[\'position\'][\'weight_unit\']=element.find("GEWEI").text
-globals[\'position\'][\'unit\']=element.find("VRKME").text
+pos=escm_order_position()
+pos.id.value=str(uuid.uuid1())
+pos.order_id.value=order.id.value
+pos.ext_pos.value=element.find("POSNR").text
+pos.quantity.value=element.find("LFIMG").text
+pos.ext_unit.value=element.find("VRKME").text
+pos.gross_weight.value=element.find("BRGEW").text
+pos.net_weight.value=element.find("NTGEW").text
+pos.ext_weight_unit.value=element.find("GEWEI").text
+pos.ext_product_no.value=element.find("MATNR").text
 
-globals[\'lot\'][\'id\']=str(uuid.uuid1())
-globals[\'lot\'][\'order_position_id\']=globals[\'position\'][\'id\']
-globals[\'lot\'][\'lot_no\']=element.find("CHARG").text
-globals[\'lot\'][\'quantity\']=element.find("LFIMG").text
-globals[\'lot\'][\'unit\']=element.find("VRKME").text
+globals[\'position\']=pickle.dumps(pos)
 
+lot=escm_order_position_lot()
+lot.id.value=str(uuid.uuid1())
+lot.order_position_id.value=pos.id.value
+lot.lot_no.value=element.find("CHARG").text
+lot.quantity.value=element.find("LFIMG").text
+
+globals[\'lot\']=pickle.dumps(lot)
 ');
 
 
@@ -283,31 +287,18 @@ INSERT IGNORE INTO api_event_handler (id, plugin_module_name,publisher,event,typ
 Save Position informations for escm_order
 """
 import xml.etree.ElementTree as ET
+import pickle
 from shared.model import *
 
 globals=params[\'globals\']
 element=ET.XML(params[\'element\'])
 
 if \'position\' in globals:
-    pos=escm_order_position()
-    pos.id.value=globals[\'position\'][\'id\']
-    pos.order_id.value=globals[\'position\'][\'order_id\']
-    pos.ext_pos.value=globals[\'position\'][\'ext_pos_no\']
-    pos.quantity.value=globals[\'position\'][\'quantity\']
-    pos.ext_unit.value=globals[\'position\'][\'unit\']
-    pos.gross_weight.value=globals[\'position\'][\'gross_weight\']
-    pos.net_weight.value=globals[\'position\'][\'net_weight\']
-    pos.ext_weight_unit.value=globals[\'position\'][\'weight_unit\']
-    pos.ext_product_no.value=globals[\'position\'][\'ext_product_no\']
-
-pos.insert(context)
+    pos=pickle.loads(globals[\'position\'])
+    pos.insert(context)
 
 if \'lot\' in globals:
-    lot=escm_order_position_lot()
-    lot.id.value=globals[\'lot\'][\'id\']
-    lot.order_position_id.value=globals[\'position\'][\'id\']
-    lot.lot_no.value=globals[\'lot\'][\'lot_no\']
-    lot.quantity.value=globals[\'lot\'][\'quantity\']
+    lot=pickle.loads(globals[\'lot\'])
     lot.insert(context)
 ');
 
